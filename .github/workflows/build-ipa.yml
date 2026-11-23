@@ -1,0 +1,41 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build-ipa:
+    name: Build Unsigned IPA (iOS)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Build Unsigned Archive
+        run: |
+          xcodebuild -project Moonlight.xcodeproj \
+            -scheme "Moonlight" \
+            -configuration Release \
+            -sdk iphoneos \
+            -archivePath "$RUNNER_TEMP/Moonlight.xcarchive" \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            DEVELOPMENT_TEAM="" \
+            archive
+
+      - name: Package IPA
+        run: |
+          mkdir -p "$RUNNER_TEMP/ipa/Payload"
+          cp -R "$RUNNER_TEMP/Moonlight.xcarchive/Products/Applications/Moonlight.app" "$RUNNER_TEMP/ipa/Payload/"
+          (cd "$RUNNER_TEMP/ipa" && zip -r "$GITHUB_WORKSPACE/Moonlight-Unrestricted.ipa" Payload)
+
+      - name: Upload IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Moonlight-Unrestricted-IPA
+          path: Moonlight-Unrestricted.ipa
+          retention-days: 7
